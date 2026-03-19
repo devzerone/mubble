@@ -5,14 +5,19 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/devzerone/mubble/internal/pathfinder"
 )
 
 // Renderer는 마크다운을 렌더링합니다.
-type Renderer struct{}
+type Renderer struct {
+	detector *pathfinder.Detector
+}
 
 // NewRenderer는 새로운 렌더러를 생성합니다.
 func NewRenderer() *Renderer {
-	return &Renderer{}
+	return &Renderer{
+		detector: pathfinder.NewDetector(),
+	}
 }
 
 // Render는 마크다운 텍스트를 렌더링합니다.
@@ -34,6 +39,9 @@ func (r *Renderer) Render(input string) string {
 
 // renderLine은 한 줄을 렌더링합니다.
 func (r *Renderer) renderLine(line string) string {
+	// 파일 경로 감지 및 렌더링 (가장 먼저 처리)
+	line = r.renderFilePaths(line)
+
 	// 헤더 레벨 감지
 	if strings.HasPrefix(line, "#") {
 		return r.renderHeading(line)
@@ -236,4 +244,59 @@ func (r *Renderer) renderLink(text string) string {
 		}
 		return match
 	})
+}
+
+// renderFilePaths는 파일 경로를 감지하고 렌더링합니다.
+func (r *Renderer) renderFilePaths(text string) string {
+	paths := r.detector.DetectPaths(text)
+
+	// 경로가 없으면 원본 반환
+	if len(paths) == 0 {
+		return text
+	}
+
+	// 감지된 경로를 치환
+	result := text
+	offset := 0
+
+	for _, path := range paths {
+		// 위치 조정 (이전 치환으로 인한 오프셋)
+		startPos := path.StartPos + offset
+		endPos := path.EndPos + offset
+
+		if startPos >= len(result) || endPos > len(result) {
+			continue
+		}
+
+		// 경로 스타일링
+		var style lipgloss.Style
+		if path.Exists {
+			style = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#4EC9B0")). // 녹색
+				Underline(true).
+				Bold(true)
+		} else {
+			style = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#FF6B6B")). // 빨간색
+				Faint(true)
+		}
+
+		// 라인 번호 추가
+		displayPath := path.Original
+		if path.LineNumber > 0 {
+			displayPath = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#DCDCAA")).
+				Render(displayPath)
+		}
+
+		renderedPath := style.Render(displayPath)
+
+		// 텍스트 치환
+		result = result[:startPos] + renderedPath + result[endPos:]
+
+		// 오프셋 조정
+		offset += len(renderedPath) - (path.EndPos - path.StartPos)
+	}
+
+	return result
 }
