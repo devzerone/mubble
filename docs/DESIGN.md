@@ -47,7 +47,44 @@
 
 ## 3. 전체 기능 목록
 
-### 3.1 마크다운 입력 (markdown-input)
+### 3.1 마크다운 입력 ✅ 구현 완료
+- ✅ 마크다운 실시간 렌더링
+- ✅ 문법 하이라이팅 (헤더, 볼드, 이탤릭, 코드, 링크)
+- ✅ 멀티라인 입력 지원
+- [ ] 자동 완성 (계획중)
+- [ ] 들여쓰기 유지 (계획중)
+
+### 3.2 파일 경로 감지 ✅ 구현 완료
+- ✅ 상대경로 패턴 매칭 (./, ../)
+- ✅ 자동 하이퍼링크 변환
+- ✅ 파일 존재 여부 확인
+- ✅ 다양한 경로 패턴 지원 (./, ../, ~/)
+- ✅ 라인 번호 포함 경로 (file.md:10)
+- ✅ 시각적 표시 (존재: 녹색, 미존재: 빨간색)
+
+### 3.3 빠른 파일 열기 (계획중)
+- [ ] 클릭으로 파일 열기
+- [ ] 기본 에디터와 연동
+- [ ] 커스텀 에디터 설정
+- [ ] 라인 번호로 이동 지원
+
+### 3.4 모드 전환 ✅ 구현 완료
+- ✅ Ctrl+M으로 터미널 모드 ↔ 마크다운 모드 전환
+- ✅ 분할 화면 레이아웃
+- ✅ 모드별 키 동작 차별화
+- ✅ 실시간 마크다운 미리보기
+
+### 3.5 터미널 명령 실행 (계획중)
+- [ ] 쉘 명령 실행
+- [ ] 출력 캡처
+- [ ] 명령 히스토리
+- [ ] 백그라운드 실행 지원
+
+### 3.6 테마/설정 (계획중)
+- [ ] 밝은/어두운 테마
+- [ ] 컬러 스킴 설정
+- [ ] 설정 파일 지원
+- [ ] 런타임 테마 전환
 - 마크다운 실시간 렌더링
 - 문법 하이라이팅
 - 자동 완성
@@ -164,52 +201,61 @@ type CommandExecutor interface {
 mubble/
 ├── cmd/
 │   └── mubble/
-│       └── main.go              # 진입점
+│       └── main.go              # ✅ 진입점
 ├── internal/
 │   ├── ui/
-│   │   ├── model.go             # Bubbletea Model
-│   │   ├── view.go              # 렌더링 로직
-│   │   ├── update.go            # 이벤트 처리
-│   │   └── markdown.go          # 마크다운 렌더러
+│   │   ├── model.go             # ✅ Bubbletea Model (모드 전환)
+│   │   └── markdown/
+│   │       └── renderer.go       # ✅ 마크다운 렌더러
 │   ├── pathfinder/
-│   │   ├── detector.go          # 경로 감지
-│   │   └── resolver.go          # 경로 해석
-│   ├── executor/
-│   │   ├── command.go           # 명령 실행
-│   │   └── editor.go            # 에디터 연동
-│   └── config/
-│       ├── config.go            # 설정 로드
-│       └── default.yaml         # 기본 설정
+│   │   └── detector.go          # ✅ 경로 감지
+│   ├── executor/                # 📁 디렉토리만 생성 (계획중)
+│   └── config/                  # 📁 디렉토리만 생성 (계획중)
 ├── docs/
-│   ├── README.md
-│   ├── DESIGN.md
-│   ├── specs/
-│   └── adr/
-├── .trust.yaml
-├── go.mod
-└── README.md
+│   ├── README.md                # ✅ 문서 인덱스
+│   ├── DESIGN.md                # ✅ 전체 설계
+│   ├── specs/                   # ✅ 피처별 스펙
+│   │   ├── markdown-input/      # ✅ spec.md, plan.md, acceptance.md, CHANGELOG.md
+│   │   ├── file-path-detection/ # ✅ spec.md, CHANGELOG.md
+│   │   ├── quick-file-open/     # 📋 spec.md만 있음
+│   │   ├── command-execution/   # 📋 spec.md만 있음
+│   │   └── theming/             # 📋 spec.md만 있음
+│   └── adr/                     # ✅ 아키텍처 의사결정
+│       ├── 001-tech-stack.md
+│       ├── 002-architecture.md
+│       ├── 003-path-detection.md
+│       └── 004-markdown-mode.md
+├── .trust.yaml                  # ✅ 품질 설정
+├── go.mod                       # ✅ 모듈 정의
+├── go.sum
+├── mubble                       # ✅ 실행 파일
+└── README.md                    # ✅ 프로젝트 개요
 ```
 
 ---
 
 ## 7. 개발 로드맵
 
-### Phase 1: MVP (1주)
-- [ ] 기본 TUI 프레임워크 (Bubbletea)
-- [ ] 마크다운 입력창 구현
-- [ ] 간단한 경로 감지
-- [ ] 엔터키로 명령 실행
+### Phase 1: MVP ✅ 완료
+- [x] 기본 TUI 프레임워크 (Bubbletea)
+- [x] 마크다운 입력창 구현
+- [x] 정교한 경로 감지 (정규식)
+- [x] 모드 전환 (Ctrl+M)
+- [x] 분할 화면 레이아웃
+- [x] 파일 경로 감지 및 렌더링
 
-### Phase 2: 핵심 기능 (2주)
-- [ ] 마크다운 실시간 렌더링
-- [ ] 정교한 경로 감지 (정규식)
-- [ ] 파일 클릭으로 열기
-- [ ] 명령 히스토리
+### Phase 2: 핵심 기능 (진행중)
+- [x] 마크다운 실시간 렌더링 ✅
+- [x] 정교한 경로 감지 ✅
+- [ ] 파일 클릭으로 열기 (다음)
+- [ ] 명령 실행 기능 (계획중)
+- [ ] 명령 히스토리 (계획중)
 
-### Phase 3: 고급 기능 (1주)
+### Phase 3: 고급 기능 (계획중)
 - [ ] 테마 시스템
 - [ ] 설정 파일 지원
 - [ ] 커스텀 에디터 연동
+- [ ] 자동 완성
 - [ ] 자동 완성
 
 ### Phase 4: 릴리스 (1주)
