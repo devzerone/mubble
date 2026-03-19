@@ -92,8 +92,16 @@ type AppState struct {
     CommandHistory   []string
     HistoryIndex     int
     Config           Config
-    Mode             Mode // InputMode, CommandMode, ViewMode
+    Mode             Mode // TerminalMode, MarkdownMode
 }
+
+// 애플리케이션 모드
+type Mode int
+
+const (
+    TerminalMode Mode = iota // 일반 터미널 모드
+    MarkdownMode              // 마크다운 모드
+)
 
 // 파일 경로 정보
 type FilePath struct {

@@ -27,27 +27,42 @@
 ```gherkin
 Feature: Markdown Input
 
+  Scenario: 마크다운 모드 진입
+    Given 사용자가 일반 터미널 모드에 있음
+    And Ctrl+M을 누름
+    Then 시스템은 마크다운 모드로 전환
+    And 분할 화면이 표시됨 (입력창 + 미리보기)
+
   Scenario: Basic markdown rendering
     Given 사용자가 입력창에 "# Header"를 입력
     Then 시스템은 큰 헤더 스타일로 렌더링
+    And 미리보기 창에 실시간으로 표시
 
   Scenario: Code block highlighting
     Given 사용자가 코드 블록을 입력
     Then 시스템은 구문 강조를 적용
 
   Scenario: Multi-line input
-    Given 사용자가 Shift+Enter를 누름
-    Then 시스템은 새 줄을 추가하고 명령을 실행하지 않음
+    Given 사용자가 마크다운 모드에서 Enter를 누름
+    Then 시스템은 새 줄을 추가
+    And 명령을 실행하지 않음
+
+  Scenario: 마크다운 모드 종료
+    Given 사용자가 마크다운 모드에 있음
+    And Ctrl+M을 다시 누름
+    Then 시스템은 일반 터미널 모드로 복귀
 ```
 
 ## 4. 기능 목록
 
-- [ ] 마크다운 실시간 렌더링
+- [x] 마크다운 실시간 렌더링
+- [ ] **마크다운 모드 전환 (Ctrl+M)**
+- [ ] 분할 화면 레이아웃 (입력창 + 미리보기)
 - [ ] 문법 하이라이팅 (헤더, 볼드, 이탤릭, 코드, 링크)
 - [ ] 멀티라인 입력 지원
 - [ ] 자동 완성
 - [ ] 들여쓰기 유지
-- [ ] 마크다운 미리보기
+- [x] 마크다운 미리보기
 
 ## 5. 인터페이스
 
@@ -62,3 +77,4 @@ type MarkdownRenderer interface {
 ## 6. 변경 이력
 
 - 2026-03-19: 스펙 초기 생성
+- 2026-03-19: 마크다운 모드 전환 기능 추가 (Ctrl+M)

@@ -1,25 +1,37 @@
 package ui
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/devzerone/mubble/internal/ui/markdown"
 )
 
+// Mode는 애플리케이션 모드를 나타냅니다.
+type Mode int
+
+const (
+	TerminalMode Mode = iota // 일반 터미널 모드
+	MarkdownMode              // 마크다운 모드
+)
+
 // Model은 애플리케이션의 전체 상태를 관리합니다.
 type Model struct {
-	width       int
-	height      int
-	quitting    bool
-	textInput   string
-	markdown    string
-	cursor      int
-	renderer    *markdown.Renderer
+	width     int
+	height    int
+	quitting  bool
+	mode      Mode
+	textInput string
+	markdown  string
+	cursor    int
+	renderer  *markdown.Renderer
 }
 
 // NewInitialModel은 초기 모델을 생성합니다.
 func NewInitialModel() Model {
 	return Model{
+		mode:     TerminalMode,
 		textInput: "",
 		markdown:  "",
 		cursor:    0,
@@ -36,36 +48,66 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
-			m.quitting = true
-			return m, tea.Quit
-
-		case tea.KeyEnter:
-			// 나중에 명령 실행 로직 추가
-			// 지금은 줄바꿈만 처리
-			if msg.Alt { // Alt+Enter는 멀티라인
-				m.textInput += "\n"
-				m.cursor++
+		{
+			// Ctrl+C: 항상 종료
+			if msg.Type == tea.KeyCtrlC {
+				m.quitting = true
+				return m, tea.Quit
 			}
-			return m, nil
 
-		case tea.KeyBackspace:
-			if len(m.textInput) > 0 {
-				m.textInput = m.textInput[:len(m.textInput)-1]
-				if m.cursor > 0 {
-					m.cursor--
+			// Ctrl+M: 모드 전환
+			if msg.Type == tea.KeyCtrlM {
+				if m.mode == TerminalMode {
+					m.mode = MarkdownMode
+				} else {
+					m.mode = TerminalMode
 				}
-				m.markdown = m.renderer.Render(m.textInput) // 마크다운 렌더링
+				return m, nil
 			}
-			return m, nil
 
-		case tea.KeyRunes:
+			// Esc: 모드별 다른 동작
+			if msg.Type == tea.KeyEsc {
+				if m.mode == MarkdownMode {
+					m.mode = TerminalMode
+					return m, nil
+				}
+				m.quitting = true
+				return m, tea.Quit
+			}
+
+			// Enter: 모드별 다른 동작
+			if msg.Type == tea.KeyEnter {
+				if m.mode == MarkdownMode {
+					m.textInput += "\n"
+					m.cursor++
+					m.markdown = m.renderer.Render(m.textInput)
+				} else {
+					m.textInput = ""
+					m.cursor = 0
+					m.markdown = ""
+				}
+				return m, nil
+			}
+
+			// Backspace: 모든 모드 동일
+			if msg.Type == tea.KeyBackspace {
+				if len(m.textInput) > 0 {
+					m.textInput = m.textInput[:len(m.textInput)-1]
+					if m.cursor > 0 {
+						m.cursor--
+					}
+					m.markdown = m.renderer.Render(m.textInput)
+				}
+				return m, nil
+			}
+
 			// 문자 입력
-			m.textInput += string(msg.Runes)
-			m.cursor += len(msg.Runes)
-			m.markdown = m.renderer.Render(m.textInput) // 마크다운 렌더링
-			return m, nil
+			if msg.Type == tea.KeyRunes {
+				m.textInput += string(msg.Runes)
+				m.cursor += len(msg.Runes)
+				m.markdown = m.renderer.Render(m.textInput)
+				return m, nil
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -83,6 +125,15 @@ func (m Model) View() string {
 		return "종료하는 중...\n"
 	}
 
+	if m.mode == MarkdownMode {
+		return m.renderMarkdownMode()
+	}
+
+	return m.renderTerminalMode()
+}
+
+// renderTerminalMode는 일반 터미널 모드를 렌더링합니다.
+func (m Model) renderTerminalMode() string {
 	// 스타일 정의
 	titleStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#86E1EC")).
@@ -94,14 +145,9 @@ func (m Model) View() string {
 		Background(lipgloss.Color("#1E1E1E")).
 		Padding(1)
 
-	markdownStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FAFAFA")).
-		Padding(1)
-
 	// 레이아웃 구성
-	title := titleStyle.Render("mubble - 마크다운 터미널")
-	input := inputStyle.Render(m.getInputLine())
-	markdownView := markdownStyle.Render(m.getMarkdownPreview())
+	title := titleStyle.Render("mubble - 터미널 모드 (Ctrl+M: 마크다운 모드)")
+	input := inputStyle.Render(m.getTerminalInput())
 
 	// 전체 화면 구성
 	return lipgloss.JoinVertical(
@@ -110,25 +156,82 @@ func (m Model) View() string {
 		"\n",
 		input,
 		"\n",
-		markdownView,
-		"\n",
-		"Ctrl+C 또는 Esc로 종료",
+		"Ctrl+C: 종료 | Ctrl+M: 마크다운 모드",
 	)
 }
 
-// getInputLine은 입력 라인을 반환합니다.
-func (m Model) getInputLine() string {
+// renderMarkdownMode는 마크다운 모드를 렌더링합니다.
+func (m Model) renderMarkdownMode() string {
+	// 스타일 정의
+	titleStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#4EC9B0")).
+		Background(lipgloss.Color("#3C3C3C")).
+		Padding(0, 2)
+
+	inputStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Background(lipgloss.Color("#1E1E1E")).
+		Padding(1).
+		Width(m.width / 2)
+
+	previewStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FAFAFA")).
+		Background(lipgloss.Color("#252525")).
+		Padding(1).
+		Width(m.width / 2).
+		Height(m.height - 5) // 제목과 도움말 공간 제외
+
+	// 레이아웃 구성
+	title := titleStyle.Render("mubble - 마크다운 모드 (Ctrl+M: 터미널 모드)")
+	input := inputStyle.Render(m.getMarkdownInput())
+	preview := previewStyle.Render(m.getMarkdownPreview())
+
+	// 분할 화면 구성
+	topSection := lipgloss.JoinHorizontal(lipgloss.Top, input, preview)
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		title,
+		"\n",
+		topSection,
+		"\n",
+		"Ctrl+C: 종료 | Ctrl+M/Esc: 터미널 모드 | Enter: 새 줄",
+	)
+}
+
+// getTerminalInput은 터미널 모드 입력 라인을 반환합니다.
+func (m Model) getTerminalInput() string {
 	if m.textInput == "" {
-		return "> 마크다운을 입력하세요..."
+		return "$ 명령을 입력하세요..."
 	}
-	return "> " + m.textInput
+	return "$ " + m.textInput
+}
+
+// getMarkdownInput은 마크다운 모드 입력 라인을 반환합니다.
+func (m Model) getMarkdownInput() string {
+	if m.textInput == "" {
+		return "> 마크다운을 입력하세요...\n"
+	}
+	lines := ""
+	for i, line := range splitLines(m.textInput) {
+		if i == 0 {
+			lines += "> " + line + "\n"
+		} else {
+			lines += "  " + line + "\n"
+		}
+	}
+	return lines
 }
 
 // getMarkdownPreview는 마크다운 미리보기를 반환합니다.
-// 나중에 Goldmark를 사용하여 실제 렌더링을 구현할 것입니다.
 func (m Model) getMarkdownPreview() string {
 	if m.markdown == "" {
-		return "미리보기가 여기에 표시됩니다..."
+		return "📄 미리보기가 여기에 표시됩니다..."
 	}
-	return "📄 미리보기:\n" + m.markdown
+	return m.markdown
+}
+
+// splitLines는 텍스트를 라인으로 분리합니다.
+func splitLines(text string) []string {
+	return strings.Split(text, "\n")
 }
