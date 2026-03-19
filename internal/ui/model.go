@@ -2,9 +2,11 @@ package ui
 
 import (
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/devzerone/mubble/internal/executor"
 	"github.com/devzerone/mubble/internal/ui/markdown"
 )
 
@@ -18,24 +20,30 @@ const (
 
 // Model은 애플리케이션의 전체 상태를 관리합니다.
 type Model struct {
-	width     int
-	height    int
-	quitting  bool
-	mode      Mode
-	textInput string
-	markdown  string
-	cursor    int
-	renderer  *markdown.Renderer
+	width      int
+	height     int
+	quitting   bool
+	mode       Mode
+	textInput  string
+	markdown   string
+	cursor     int
+	renderer   *markdown.Renderer
+	fileOpener *executor.FileOpener
+	statusMsg  string
+	statusType int // 0: info, 1: success, 2: error
 }
 
 // NewInitialModel은 초기 모델을 생성합니다.
 func NewInitialModel() Model {
 	return Model{
-		mode:     TerminalMode,
-		textInput: "",
-		markdown:  "",
-		cursor:    0,
-		renderer:  markdown.NewRenderer(),
+		mode:       TerminalMode,
+		textInput:  "",
+		markdown:   "",
+		cursor:     0,
+		renderer:   markdown.NewRenderer(),
+		fileOpener: executor.NewFileOpener(),
+		statusMsg:  "",
+		statusType: 0,
 	}
 }
 
@@ -114,10 +122,43 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		return m, nil
+
+	case tea.MouseMsg:
+		// 마우스 클릭 처리
+		if msg.Type == tea.MouseLeft {
+			// 파일 열기 시도
+			if m.mode == MarkdownMode {
+				return m.handleMouseClick(msg)
+			}
+		}
+		return m, nil
+
+	case clearStatusMsg:
+		m.statusMsg = ""
+		m.statusType = 0
+		return m, nil
 	}
 
 	return m, nil
 }
+
+// handleMouseClick은 마우스 클릭을 처리합니다.
+func (m Model) handleMouseClick(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	// 현재는 간단하게 상태 메시지만 표시
+	// 나중에 실제 클릭 위치 계산 구현
+	m.statusMsg = "🖱️ 마우스 클릭 감지됨"
+	m.statusType = 1
+
+	// 파일 열기 시�레 실행 (데모)
+	// 실제로는 클릭된 위치의 경로를 감지해야 함
+	// 지금은 상태 메시지만 표시
+	return m, tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
+		return clearStatusMsg{}
+	})
+}
+
+// clearStatusMsg는 상태 메시지를 지우는 메시지입니다.
+type clearStatusMsg struct{}
 
 // View는 UI를 렌더링합니다.
 func (m Model) View() string {
@@ -195,7 +236,7 @@ func (m Model) renderMarkdownMode() string {
 		"\n",
 		topSection,
 		"\n",
-		"Ctrl+C: 종료 | Ctrl+M/Esc: 터미널 모드 | Enter: 새 줄",
+		m.getStatusBar(),
 	)
 }
 
@@ -234,4 +275,25 @@ func (m Model) getMarkdownPreview() string {
 // splitLines는 텍스트를 라인으로 분리합니다.
 func splitLines(text string) []string {
 	return strings.Split(text, "\n")
+}
+
+// getStatusBar는 상태바를 반환합니다.
+func (m Model) getStatusBar() string {
+	if m.statusMsg == "" {
+		return "Ctrl+C: 종료 | Ctrl+M/Esc: 터미널 모드 | Enter: 새 줄"
+	}
+
+	style := lipgloss.NewStyle()
+	if m.statusType == 1 { // success
+		style = style.Foreground(lipgloss.Color("#4EC9B0")) // 녹색
+	} else if m.statusType == 2 { // error
+		style = style.Foreground(lipgloss.Color("#FF6B6B")) // 빨간색
+	}
+
+	return style.Render("│ " + m.statusMsg + " │ Ctrl+C: 종료 | Ctrl+M: 터미널 모드 | Enter: 새 줄")
+}
+
+// clearStatus는 상태 메시지를 지웁니다.
+func (m Model) clearStatus() tea.Msg {
+	return clearStatusMsg{}
 }
