@@ -1,0 +1,65 @@
+# TRUST 5 품질 기준 설정
+
+# 테스트 커버리지
+test_coverage:
+  min: 80
+  exclude_paths:
+    - "cmd/"
+    - "internal/ui/view.go"
+
+# 코드 리뷰
+code_review:
+  required: true
+  min_reviewers: 1
+
+# Go Vet
+go_vet:
+  enabled: true
+
+# Golangci-lint
+golangci_lint:
+  enabled: true
+  max_issues: 10
+  timeout: 5m
+
+# LSP 게이트
+lsp_gates:
+  plan:
+    max_errors: 0
+    max_warnings: 20
+
+  run:
+    max_errors: 0
+    max_warnings: 15
+
+  sync:
+    max_errors: 0
+    max_warnings: 10
+
+# 품질 검증 대상
+quality_checks:
+  - name: "Test Coverage"
+    type: "coverage"
+    enabled: true
+
+  - name: "Go Vet"
+    type: "static_analysis"
+    enabled: true
+
+  - name: "Golangci-lint"
+    type: "linter"
+    enabled: true
+
+  - name: "Code Review"
+    type: "review"
+    enabled: true
+
+# 예외 규칙
+exceptions:
+  - pattern: "internal/ui/view.go"
+    reason: "View 코드는 테스트하기 어려운 렌더링 로직 포함"
+    min_coverage: 50
+
+  - pattern: "cmd/**"
+    reason: "진입점은 단순한 초기화 코드"
+    min_coverage: 60
