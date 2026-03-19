@@ -3,6 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/devzerone/mubble/internal/ui/markdown"
 )
 
 // Model은 애플리케이션의 전체 상태를 관리합니다.
@@ -13,6 +14,7 @@ type Model struct {
 	textInput   string
 	markdown    string
 	cursor      int
+	renderer    *markdown.Renderer
 }
 
 // NewInitialModel은 초기 모델을 생성합니다.
@@ -21,6 +23,7 @@ func NewInitialModel() Model {
 		textInput: "",
 		markdown:  "",
 		cursor:    0,
+		renderer:  markdown.NewRenderer(),
 	}
 }
 
@@ -53,7 +56,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.cursor > 0 {
 					m.cursor--
 				}
-				m.markdown = m.textInput // 마크다운 렌더링 (나중에 구현)
+				m.markdown = m.renderer.Render(m.textInput) // 마크다운 렌더링
 			}
 			return m, nil
 
@@ -61,7 +64,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// 문자 입력
 			m.textInput += string(msg.Runes)
 			m.cursor += len(msg.Runes)
-			m.markdown = m.textInput // 마크다운 렌더링 (나중에 구현)
+			m.markdown = m.renderer.Render(m.textInput) // 마크다운 렌더링
 			return m, nil
 		}
 
@@ -96,7 +99,7 @@ func (m Model) View() string {
 		Padding(1)
 
 	// 레이아웃 구성
-	title := titleStyle.Render("md-terminal - 마크다운 터미널")
+	title := titleStyle.Render("mubble - 마크다운 터미널")
 	input := inputStyle.Render(m.getInputLine())
 	markdownView := markdownStyle.Render(m.getMarkdownPreview())
 
